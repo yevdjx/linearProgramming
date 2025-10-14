@@ -23,17 +23,14 @@ namespace zlpP
 
             panelRight.Resize += (s, e) => panelRight.Invalidate();
 
-            // Инициализируем коллекции
             constraints = new List<Constraint>();
             points = new List<PointF>();
             feasiblePoints = new List<PointF>();
             steps = new List<string>();
 
-
-            // Добавляем обработчик изменения размера
+            
             this.Resize += (s, e) => panelRight.Invalidate();
 
-            // Добавляем ограничение по умолчанию
             AddDefaultConstraint();
             InitializeDataGridView();
 
@@ -47,13 +44,11 @@ namespace zlpP
             feasiblePoints = new List<PointF>();
             steps = new List<string>();
 
-            // Добавляем ограничение по умолчанию
             AddDefaultConstraint();
         }
 
         private void InitializeDataGridView()
         {
-            // Скрываем первый столбец с номерами строк
             dataGridViewConstraints.RowHeadersVisible = false;
 
             // Настройка столбцов DataGridView
@@ -69,12 +64,11 @@ namespace zlpP
             }
 
             // Устанавливаем одинаковую ширину для трех столбцов
-            int equalWidth = 90; // или другое значение по вашему вкусу
+            int equalWidth = 90; 
             dataGridViewConstraints.Columns["A"].Width = equalWidth;
             dataGridViewConstraints.Columns["B"].Width = equalWidth;
             dataGridViewConstraints.Columns["Sign"].Width = equalWidth;
 
-            // Четвертый столбец немного шире
             dataGridViewConstraints.Columns["C"].Width = 110;
         }
 
@@ -144,12 +138,12 @@ namespace zlpP
                 panelRight.Invalidate();
 
                 // Выводим отладочную информацию
-                Console.WriteLine($"Найдено точек: {feasiblePoints.Count}");
+                MessageBox.Show($"Найдено точек: {feasiblePoints.Count}");
                 foreach (var point in feasiblePoints)
                 {
-                    Console.WriteLine($"Точка: ({point.X:F2}, {point.Y:F2})");
+                    MessageBox.Show($"Точка: ({point.X:F2}, {point.Y:F2})");
                 }
-                Console.WriteLine($"Оптимальная: ({optimalPoint.X:F2}, {optimalPoint.Y:F2}) = {optimalValue:F2}");
+                MessageBox.Show($"Оптимальная: ({optimalPoint.X:F2}, {optimalPoint.Y:F2}) = {optimalValue:F2}");
             }
             catch (Exception ex)
             {
@@ -175,7 +169,6 @@ namespace zlpP
                         points.Add(intersection.Value);
                     }
                 }
-
                 // Пересечения с осями для каждого ограничения
                 AddAxisIntersections(constraints[i]);
             }
@@ -189,15 +182,13 @@ namespace zlpP
             int width = panelRight.Width;
             int height = panelRight.Height;
 
-            // ФИКСИРОВАННОЕ положение осей (10% отступ от краев)
-            int offsetX = width / 10;      // ось Y всегда на 10% от левого края
-            int offsetY = height * 9 / 10; // ось X всегда на 10% от нижнего края
+            int offsetX = width / 10;      // ось y всегда на 10% от левого края
+            int offsetY = height * 9 / 10; // ось x всегда на 10% от нижнего края
 
             float scale = CalculateOptimalScale();
 
-            // Оси координат
-            g.DrawLine(Pens.Black, 0, offsetY, width, offsetY); // ось X
-            g.DrawLine(Pens.Black, offsetX, 0, offsetX, height); // ось Y
+            g.DrawLine(Pens.Black, 0, offsetY, width, offsetY); // ось x
+            g.DrawLine(Pens.Black, offsetX, 0, offsetX, height); // ось y
 
             // Стрелки осей
             DrawAxisArrows(g, width, height, offsetX, offsetY);
@@ -230,7 +221,7 @@ namespace zlpP
                 }
             }
 
-            // Добавляем точки далеко за пределами (в 2 раза дальше максимальных значений)
+            // Добавляем точки далеко за пределами в 2 раза дальше максимальных значений
             float farX = Math.Max(maxX * 2, 50f);
             float farY = Math.Max(maxY * 2, 50f);
 
@@ -267,7 +258,7 @@ namespace zlpP
             double x = (c2.B * c1.C - c1.B * c2.C) / det;
             double y = (c1.A * c2.C - c2.A * c1.C) / det;
 
-            // Проверяем, что точка неотрицательная (с небольшой погрешностью)
+            // Проверяем, что точка неотрицательная 
             if (x >= -0.001 && y >= -0.001)
                 return new PointF((float)x, (float)y);
 
@@ -303,7 +294,6 @@ namespace zlpP
         {
             if (feasiblePoints.Count < 3) return;
 
-            // Находим выпуклую оболочку методом оболочки Грэхема
             var hull = new List<PointF>();
 
             // Находим самую левую-нижнюю точку
@@ -406,7 +396,7 @@ namespace zlpP
                 steps.Add($"{GetPointName(i)}({feasiblePoints[i].X:F2}, {feasiblePoints[i].Y:F2})");
             }
 
-            // Отладочная информация о масштабе
+            // информация про масштаб
             float scale = CalculateOptimalScale();
             steps.Add($"\nМасштаб: {scale:F1}, Максимальные координаты: X={feasiblePoints.Max(p => p.X):F1}, Y={feasiblePoints.Max(p => p.Y):F1}");
 
@@ -471,7 +461,7 @@ namespace zlpP
             float minVisibleX = -offsetX / scale;               // мин X слева от оси Y
             float minVisibleY = -(height - offsetY) / scale;    // мин Y под осью X
 
-            // Определяем шаг для засечек на основе видимого диапазона
+            // Определяем шаг для засечек
             float visibleRange = Math.Max(maxVisibleX - minVisibleX, maxVisibleY - minVisibleY);
             float step = GetOptimalStep(visibleRange);
 
@@ -523,7 +513,6 @@ namespace zlpP
                 }
             }
 
-            // Подпись нуля
             g.DrawString("0", Font, Brushes.Black, offsetX + 3, offsetY + 3);
         }
 
@@ -577,7 +566,7 @@ namespace zlpP
             int width = panelRight.Width;
             int height = panelRight.Height;
 
-            // ФИКСИРОВАННОЕ положение осей
+            // Положение осей
             int offsetX = width / 10;
             int offsetY = height * 9 / 10;
 
@@ -661,13 +650,13 @@ namespace zlpP
             int width = panelRight.Width;
             int height = panelRight.Height;
 
-            // ФИКСИРОВАННОЕ положение осей
+            // Положение осей
             int offsetX = width / 10;
             int offsetY = height * 9 / 10;
 
             float scale = CalculateOptimalScale();
 
-            // Преобразуем точки в экранные координаты относительно ФИКСИРОВАННЫХ осей
+            // Преобразуем точки в экранные координаты относительно осей
             PointF[] screenPoints = feasiblePoints
                 .Select(p => new PointF(offsetX + p.X * scale, offsetY - p.Y * scale))
                 .ToArray();
@@ -702,7 +691,7 @@ namespace zlpP
             int width = panelRight.Width;
             int height = panelRight.Height;
 
-            // ФИКСИРОВАННОЕ положение осей
+            // Положение осей
             int offsetX = width / 10;
             int offsetY = height * 9 / 10;
 
@@ -764,7 +753,7 @@ namespace zlpP
             int width = panelRight.Width;
             int height = panelRight.Height;
 
-            // ФИКСИРОВАННОЕ положение осей
+            // Положение осей
             int offsetX = width / 10;
             int offsetY = height * 9 / 10;
 
@@ -866,7 +855,7 @@ namespace zlpP
                 int width = panelRight.Width;
                 int height = panelRight.Height;
 
-                // ФИКСИРОВАННОЕ положение осей
+                // Положение осей
                 int offsetX = width / 10;
                 int offsetY = height * 9 / 10;
 
