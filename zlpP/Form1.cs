@@ -443,8 +443,9 @@ namespace zlpP
             float minVisibleX = -offsetX / scale;               // мин X слева от оси Y
             float minVisibleY = -(height - offsetY) / scale;    // мин Y под осью X
 
-            // Определяем шаг для засечек
-            float step = GetOptimalStep(Math.Max(maxVisibleX, maxVisibleY));
+            // Определяем шаг для засечек на основе видимого диапазона
+            float visibleRange = Math.Max(maxVisibleX - minVisibleX, maxVisibleY - minVisibleY);
+            float step = GetOptimalStep(visibleRange);
 
             // Засечки на оси X (положительные)
             for (float i = step; i <= maxVisibleX; i += step)
@@ -453,7 +454,7 @@ namespace zlpP
                 if (x < width - 20)
                 {
                     g.DrawLine(Pens.Gray, x, offsetY - 3, x, offsetY + 3);
-                    string label = i.ToString(i % 1 == 0 ? "F0" : "F1");
+                    string label = FormatLabel(i);
                     g.DrawString(label, Font, Brushes.Black, x - 8, offsetY + 5);
                 }
             }
@@ -465,7 +466,7 @@ namespace zlpP
                 if (x > 20)
                 {
                     g.DrawLine(Pens.Gray, x, offsetY - 3, x, offsetY + 3);
-                    string label = i.ToString(i % 1 == 0 ? "F0" : "F1");
+                    string label = FormatLabel(i);
                     g.DrawString(label, Font, Brushes.Black, x - 8, offsetY + 5);
                 }
             }
@@ -477,7 +478,7 @@ namespace zlpP
                 if (y > 20)
                 {
                     g.DrawLine(Pens.Gray, offsetX - 3, y, offsetX + 3, y);
-                    string label = i.ToString(i % 1 == 0 ? "F0" : "F1");
+                    string label = FormatLabel(i);
                     g.DrawString(label, Font, Brushes.Black, offsetX + 5, y - 8);
                 }
             }
@@ -489,7 +490,7 @@ namespace zlpP
                 if (y < height - 20)
                 {
                     g.DrawLine(Pens.Gray, offsetX - 3, y, offsetX + 3, y);
-                    string label = i.ToString(i % 1 == 0 ? "F0" : "F1");
+                    string label = FormatLabel(i);
                     g.DrawString(label, Font, Brushes.Black, offsetX + 5, y - 8);
                 }
             }
@@ -498,14 +499,35 @@ namespace zlpP
             g.DrawString("0", Font, Brushes.Black, offsetX + 3, offsetY + 3);
         }
 
+        private string FormatLabel(float value)
+        {
+            // Для больших чисел используем целочисленный формат
+            if (Math.Abs(value) >= 100)
+                return value.ToString("F0");
+
+            // Для средних чисел используем одну decimal
+            if (Math.Abs(value) >= 10)
+                return value.ToString("F0");
+
+            // Для маленьких чисел используем одну decimal
+            return value.ToString("F1");
+        }
+
 
         private float GetOptimalStep(float range)
         {
+            // Для больших диапазонов используем большие шаги
             if (range <= 5) return 1f;
             if (range <= 10) return 2f;
             if (range <= 20) return 5f;
             if (range <= 50) return 10f;
-            return (float)Math.Ceiling(range / 10);
+            if (range <= 100) return 20f;
+            if (range <= 200) return 50f;
+            if (range <= 500) return 100f;
+            if (range <= 1000) return 200f;
+
+            // Для очень больших диапазонов
+            return (float)Math.Pow(10, Math.Ceiling(Math.Log10(range)) - 1);
         }
 
         private void DrawAxisArrows(Graphics g, int width, int height, int offsetX, int offsetY)
@@ -830,6 +852,14 @@ namespace zlpP
                 float requiredWidth = (maxX - minX) * 1.2f;
                 float requiredHeight = (maxY - minY) * 1.2f;
 
+                // Если числа очень большие, уменьшаем масштаб более агрессивно
+                if (requiredWidth > 1000 || requiredHeight > 1000)
+                {
+                    float maxDimension = Math.Max(requiredWidth, requiredHeight);
+                    float scaleForLarge = Math.Min(width, height) / maxDimension * 0.8f;
+                    return Math.Max(scaleForLarge, 1f); // Минимальный масштаб 1
+                }
+
                 // Доступная область для графика (от фиксированных осей)
                 float availableWidthRight = width - offsetX - 20;  // справа от оси Y
                 float availableWidthLeft = offsetX - 20;           // слева от оси Y
@@ -846,7 +876,7 @@ namespace zlpP
                 float scale = Math.Min(Math.Min(scaleRight, scaleLeft), Math.Min(scaleUp, scaleDown));
 
                 // Ограничить масштаб разумными пределами
-                scale = Math.Max(scale, 10f);
+                scale = Math.Max(scale, 1f);   // минимальный масштаб уменьшен для больших чисел
                 scale = Math.Min(scale, 200f);
 
                 return scale;
