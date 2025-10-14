@@ -8,35 +8,32 @@ namespace zlpP
 {
     public partial class Form1 : Form
     {
-        private List<Constraint> constraints;
-        private List<PointF> points;
-        private List<PointF> feasiblePoints;
-        private PointF optimalPoint;
-        private double optimalValue;
-        private bool isSolved = false;
-        private int currentStep = 0;
-        private List<string> steps;
+        // Поля класса
+        private List<Constraint> constraints;    // Список ограничений задачи
+        private List<PointF> points;             // Все точки пересечений ограничений
+        private List<PointF> feasiblePoints;     // Допустимые точки (вершины многоугольника решений)
+        private PointF optimalPoint;             // Оптимальная точка решения
+        private double optimalValue;             // Оптимальное значение целевой функции
+        private bool isSolved = false;           // Флаг решения задачи
+        private int currentStep = 0;             // Текущий шаг пошагового решения
+        private List<string> steps;              // Список шагов решения для отображения
 
+        // Конструктор формы
         public Form1()
         {
             InitializeComponent();
-
-            panelRight.Resize += (s, e) => panelRight.Invalidate();
 
             constraints = new List<Constraint>();
             points = new List<PointF>();
             feasiblePoints = new List<PointF>();
             steps = new List<string>();
 
-            
-            this.Resize += (s, e) => panelRight.Invalidate();
-
-            AddDefaultConstraint();
-            InitializeDataGridView();
-
-            InitializeData();
+            AddDefaultConstraint();  // Добавляем ограничение по умолчанию
+            InitializeDataGridView(); // Настраиваем таблицу ограничений
+            InitializeData();         // Инициализируем данные
         }
 
+        // Инициализация данных
         private void InitializeData()
         {
             constraints = new List<Constraint>();
@@ -47,6 +44,37 @@ namespace zlpP
             AddDefaultConstraint();
         }
 
+        // Класс ограничения
+        public class Constraint
+        {
+            public double A { get; set; }
+            public double B { get; set; }
+            public string Inequality { get; set; }
+            public double C { get; set; }
+
+            public Constraint(double a, double b, string inequality, double c)
+            {
+                A = a;
+                B = b;
+                Inequality = inequality;
+                C = c;
+            }
+
+            public bool IsSatisfied(double x, double y)
+            {
+                double value = A * x + B * y;
+
+                switch (Inequality)
+                {
+                    case "<=": return value <= C + 0.001;
+                    case ">=": return value >= C - 0.001;
+                    case "=": return Math.Abs(value - C) < 0.001;
+                    default: return false;
+                }
+            }
+        }
+
+        // Инициализация таблицы ограничений
         private void InitializeDataGridView()
         {
             dataGridViewConstraints.RowHeadersVisible = false;
@@ -64,7 +92,7 @@ namespace zlpP
             }
 
             // Устанавливаем одинаковую ширину для трех столбцов
-            int equalWidth = 90; 
+            int equalWidth = 90;
             dataGridViewConstraints.Columns["A"].Width = equalWidth;
             dataGridViewConstraints.Columns["B"].Width = equalWidth;
             dataGridViewConstraints.Columns["Sign"].Width = equalWidth;
@@ -72,18 +100,14 @@ namespace zlpP
             dataGridViewConstraints.Columns["C"].Width = 110;
         }
 
+        // Добавление ограничения по умолчанию
         private void AddDefaultConstraint()
         {
             dataGridViewConstraints.Rows.Add(1, 1, "<=", 10);
             UpdateConstraints();
         }
 
-        private void btnAddConstraint_Click_1(object sender, EventArgs e)
-        {
-            dataGridViewConstraints.Rows.Add(1, 1, "<=", 5);
-            UpdateConstraints();
-        }
-
+        // Обновление списка ограничений из таблицы
         private void UpdateConstraints()
         {
             constraints = new List<Constraint>();
@@ -102,55 +126,7 @@ namespace zlpP
             panelRight.Invalidate();
         }
 
-        private void btnSolve_Click_1(object sender, EventArgs e)
-        {
-            SolveProblem();
-        }
-
-        private void SolveProblem()
-        {
-            try
-            {
-                double x1coef = Convert.ToDouble(txtX1.Text);
-                double x2coef = Convert.ToDouble(txtX2.Text);
-                bool isMax = rbMax.Checked;
-
-                // Сбрасываем состояние
-                isSolved = false;
-
-                // Пересчитываем все точки
-                FindAllPoints();
-                FindFeasiblePoints();
-
-                if (feasiblePoints.Count == 0)
-                {
-                    MessageBox.Show("Область допустимых решений пуста!");
-                    return;
-                }
-
-                FindOptimalSolution(x1coef, x2coef, isMax);
-                GenerateSteps(x1coef, x2coef, isMax);
-
-                // Обновляем отображение
-                currentStep = Math.Min(steps.Count - 1, 28); // Ограничиваем максимальный шаг
-                UpdateStepDisplay();
-                isSolved = true;
-                panelRight.Invalidate();
-
-                // Выводим отладочную информацию
-                MessageBox.Show($"Найдено точек: {feasiblePoints.Count}");
-                foreach (var point in feasiblePoints)
-                {
-                    MessageBox.Show($"Точка: ({point.X:F2}, {point.Y:F2})");
-                }
-                MessageBox.Show($"Оптимальная: ({optimalPoint.X:F2}, {optimalPoint.Y:F2}) = {optimalValue:F2}");
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка: {ex.Message}");
-            }
-        }
-
+        // Поиск всех точек пересечения ограничений
         private void FindAllPoints()
         {
             points.Clear();
@@ -177,30 +153,7 @@ namespace zlpP
             AddFarPointsForUnboundedRegions();
         }
 
-        private void DrawCoordinateSystem(Graphics g)
-        {
-            int width = panelRight.Width;
-            int height = panelRight.Height;
-
-            int offsetX = width / 10;      // ось y всегда на 10% от левого края
-            int offsetY = height * 9 / 10; // ось x всегда на 10% от нижнего края
-
-            float scale = CalculateOptimalScale();
-
-            g.DrawLine(Pens.Black, 0, offsetY, width, offsetY); // ось x
-            g.DrawLine(Pens.Black, offsetX, 0, offsetX, height); // ось y
-
-            // Стрелки осей
-            DrawAxisArrows(g, width, height, offsetX, offsetY);
-
-            // Засечки и подписи
-            DrawGridMarks(g, width, height, offsetX, offsetY, scale);
-
-            // Подписи осей
-            g.DrawString("X₁", Font, Brushes.Black, width - 20, offsetY + 5);
-            g.DrawString("X₂", Font, Brushes.Black, offsetX + 5, 5);
-        }
-
+        // Добавление точек для неограниченных областей
         private void AddFarPointsForUnboundedRegions()
         {
             // Находим максимальные значения из ограничений
@@ -230,7 +183,7 @@ namespace zlpP
             points.Add(new PointF(farX, farY));
         }
 
-
+        // Добавление точек пересечения с осями координат
         private void AddAxisIntersections(Constraint c)
         {
             // С осью X (y = 0)
@@ -250,6 +203,7 @@ namespace zlpP
             }
         }
 
+        // Поиск точки пересечения двух ограничений
         private PointF? GetIntersection(Constraint c1, Constraint c2)
         {
             double det = c1.A * c2.B - c2.A * c1.B;
@@ -265,6 +219,7 @@ namespace zlpP
             return null;
         }
 
+        // Поиск допустимых точек (принадлежащих области решений)
         private void FindFeasiblePoints()
         {
             feasiblePoints.Clear();
@@ -290,6 +245,7 @@ namespace zlpP
             }
         }
 
+        // Построение выпуклой оболочки точек
         private void FindConvexHull()
         {
             if (feasiblePoints.Count < 3) return;
@@ -325,6 +281,7 @@ namespace zlpP
             feasiblePoints = hull;
         }
 
+        // Вычисление расстояния между двумя точками
         private float Distance(PointF a, PointF b)
         {
             float dx = a.X - b.X;
@@ -332,11 +289,13 @@ namespace zlpP
             return dx * dx + dy * dy;
         }
 
+        // Векторное произведение для определения ориентации
         private float CrossProduct(PointF a, PointF b, PointF c)
         {
             return (b.X - a.X) * (c.Y - a.Y) - (b.Y - a.Y) * (c.X - a.X);
         }
 
+        // Проверка точки на допустимость (удовлетворяет всем ограничениям)
         private bool IsPointFeasible(PointF p)
         {
             // Проверяем неотрицательность
@@ -351,6 +310,7 @@ namespace zlpP
             return true;
         }
 
+        // Поиск оптимального решения
         private void FindOptimalSolution(double x1coef, double x2coef, bool isMax)
         {
             if (feasiblePoints.Count == 0)
@@ -371,6 +331,7 @@ namespace zlpP
             }
         }
 
+        // Генерация шагов решения для отображения
         private void GenerateSteps(double x1coef, double x2coef, bool isMax)
         {
             steps.Clear();
@@ -378,13 +339,13 @@ namespace zlpP
             steps.Add("ШАГ 1: Построение ограничений");
             for (int i = 0; i < constraints.Count; i++)
             {
-                steps.Add($"Прямая {i + 1}: {constraints[i]}");
+                steps.Add($"Ограничение {i + 1}: {FormatConstraint(constraints[i])}");
             }
 
             steps.Add("\nШАГ 2: Определение полуплоскостей");
             for (int i = 0; i < constraints.Count; i++)
             {
-                steps.Add($"{constraints[i]} - {GetHalfPlaneDesc(constraints[i])}");
+                steps.Add($"Ограничение {i + 1} - {GetHalfPlaneDesc(constraints[i])}");
             }
 
             steps.Add("\nШАГ 3: Область допустимых решений");
@@ -415,44 +376,122 @@ namespace zlpP
             steps.Add($"F({optimalPoint.X:F2}, {optimalPoint.Y:F2}) = {optimalValue:F2}");
         }
 
+        // Форматирование ограничения в читаемый вид
+        private string FormatConstraint(Constraint c)
+        {
+            string result = "";
+
+            // Коэффициент при x1
+            if (Math.Abs(c.A) > 1e-10)
+            {
+                if (c.A == 1)
+                    result += "x₁";
+                else if (c.A == -1)
+                    result += "-x₁";
+                else
+                    result += $"{c.A}x₁";
+            }
+
+            // Коэффициент при x2
+            if (Math.Abs(c.B) > 1e-10)
+            {
+                if (result.Length > 0)
+                    result += c.B >= 0 ? " + " : " - ";
+                else if (c.B < 0)
+                    result += "-";
+
+                if (Math.Abs(c.B) == 1)
+                    result += "x₂";
+                else
+                    result += $"{Math.Abs(c.B)}x₂";
+            }
+
+            // Если оба коэффициента нулевые
+            if (string.IsNullOrEmpty(result))
+                result = "0";
+
+            // Знак неравенства и значение
+            result += $" {c.Inequality} {c.C}";
+
+            return result;
+        }
+
+        // Получение описания полуплоскости
         private string GetHalfPlaneDesc(Constraint c)
         {
             return c.Inequality == "<=" ? "полуплоскость ниже прямой" : "полуплоскость выше прямой";
         }
 
+        // Получение имени точки
         private string GetPointName(int index)
         {
             return ((char)('A' + index)).ToString();
         }
 
-        private void panelRight_Paint_1(object sender, PaintEventArgs e)
+        // Основный метод решения задачи
+        private void SolveProblem()
         {
-            Graphics g = e.Graphics;
-            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-
-            DrawCoordinateSystem(g);
-
-            if (constraints.Count > 0)
+            try
             {
-                DrawConstraints(g);
+                // Получаем коэффициенты целевой функции из интерфейса
+                double x1coef = Convert.ToDouble(txtX1.Text);
+                double x2coef = Convert.ToDouble(txtX2.Text);
+                bool isMax = rbMax.Checked; // Определяем направление оптимизации
 
-                if (isSolved && currentStep >= 2)
+                // Сбрасываем состояние решения
+                isSolved = false;
+
+                // Основные этапы:
+                FindAllPoints();        // Находим все точки пересечений ограничений
+                FindFeasiblePoints();   // Определяем допустимые точки
+
+                if (feasiblePoints.Count == 0)
                 {
-                    DrawFeasibleRegion(g);
+                    MessageBox.Show("Область допустимых решений пуста!");
+                    return;
                 }
 
-                if (isSolved && currentStep >= 5)
-                {
-                    DrawOptimalPoint(g);
-                }
+                FindOptimalSolution(x1coef, x2coef, isMax); // Находим оптимальное решение
+                GenerateSteps(x1coef, x2coef, isMax);       // Генерируем шаги решения
 
-                if (isSolved && currentStep >= 4)
-                {
-                    DrawGradient(g);
-                }
+                // Обновляем отображение
+                currentStep = Math.Min(steps.Count - 1, 28);
+                UpdateStepDisplay();
+                isSolved = true;
+                panelRight.Invalidate();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка: {ex.Message}");
             }
         }
 
+        // Отрисовка координатной системы
+        private void DrawCoordinateSystem(Graphics g)
+        {
+            int width = panelRight.Width;
+            int height = panelRight.Height;
+
+            int offsetX = width / 10;      // ось y всегда на 10% от левого края
+            int offsetY = height * 9 / 10; // ось x всегда на 10% от нижнего края
+
+            float scale = CalculateOptimalScale();
+
+            g.DrawLine(Pens.Black, 0, offsetY, width, offsetY); // ось x
+            g.DrawLine(Pens.Black, offsetX, 0, offsetX, height); // ось y
+
+            // Стрелки осей
+            DrawAxisArrows(g, width, height, offsetX, offsetY);
+
+            // Засечки и подписи
+            DrawGridMarks(g, width, height, offsetX, offsetY, scale);
+
+            // Подписи осей
+            g.DrawString("X₁", Font, Brushes.Black, width - 20, offsetY + 5);
+            g.DrawString("X₂", Font, Brushes.Black, offsetX + 5, 5);
+        }
+
+        // Отрисовка засечек и подписей на осях
         private void DrawGridMarks(Graphics g, int width, int height, int offsetX, int offsetY, float scale)
         {
             // Вычисляем максимальные значения, которые можно отобразить
@@ -516,6 +555,7 @@ namespace zlpP
             g.DrawString("0", Font, Brushes.Black, offsetX + 3, offsetY + 3);
         }
 
+        // Форматирование подписей на осях
         private string FormatLabel(float value)
         {
             // Для больших чисел используем целочисленный формат
@@ -530,7 +570,7 @@ namespace zlpP
             return value.ToString("F1");
         }
 
-
+        // Определение оптимального шага для засечек
         private float GetOptimalStep(float range)
         {
             // Для больших диапазонов используем большие шаги
@@ -547,6 +587,7 @@ namespace zlpP
             return (float)Math.Pow(10, Math.Ceiling(Math.Log10(range)) - 1);
         }
 
+        // Отрисовка стрелок на осях
         private void DrawAxisArrows(Graphics g, int width, int height, int offsetX, int offsetY)
         {
             // Стрелка оси X
@@ -558,9 +599,9 @@ namespace zlpP
             g.DrawLine(Pens.Black, offsetX + 5, 10, offsetX, 0);
         }
 
+        // Отрисовка ограничений
         private void DrawConstraints(Graphics g)
         {
-
             if (constraints.Count == 0) return;
 
             int width = panelRight.Width;
@@ -582,6 +623,7 @@ namespace zlpP
             }
         }
 
+        // Отрисовка линии ограничения
         private void DrawConstraintLine(Graphics g, Constraint constraint, Color color, int offsetX, int offsetY, float scale, int width, int height)
         {
             Pen pen = new Pen(color, 2);
@@ -641,10 +683,9 @@ namespace zlpP
             pen.Dispose();
         }
 
-
+        // Отрисовка области допустимых решений
         private void DrawFeasibleRegion(Graphics g)
         {
-
             if (feasiblePoints.Count < 3) return;
 
             int width = panelRight.Width;
@@ -683,7 +724,7 @@ namespace zlpP
             }
         }
 
-
+        // Отрисовка оптимальной точки
         private void DrawOptimalPoint(Graphics g)
         {
             if (!isSolved) return;
@@ -697,7 +738,7 @@ namespace zlpP
 
             float scale = CalculateOptimalScale();
 
-            // Координаты оптимальной точки на экране относительно ФИКСИРОВАННЫХ осей
+            // Координаты оптимальной точки на экране относительно фикс осей
             PointF screenPoint = new PointF(
                 offsetX + optimalPoint.X * scale,
                 offsetY - optimalPoint.Y * scale);
@@ -719,6 +760,7 @@ namespace zlpP
             }
         }
 
+        // Отрисовка стрелки
         private void DrawArrow(Graphics g, Pen pen, PointF start, PointF end)
         {
             float arrowSize = 8;
@@ -743,6 +785,7 @@ namespace zlpP
             }
         }
 
+        // Отрисовка вектора градиента
         private void DrawGradient(Graphics g)
         {
             if (!isSolved) return;
@@ -784,69 +827,9 @@ namespace zlpP
                 Font, Brushes.DarkGreen, end.X + 5, end.Y - 5);
         }
 
-        private void btnClear_Click_1(object sender, EventArgs e)
-        {
-            dataGridViewConstraints.Rows.Clear();
-            constraints.Clear();
-            points.Clear();
-            feasiblePoints.Clear();
-            steps.Clear();
-            currentStep = 0;
-            isSolved = false;
-
-            txtX1.Clear();
-            txtX2.Clear();
-
-            rbMax.Checked = true;
-            rbMin.Checked = false;
-
-            txtSolution.Clear();
-            lblStep.Text = "Шаг 0/0";
-            panelRight.Invalidate();
-
-            AddDefaultConstraint();
-        }
-
-        private void btnNextStep_Click_1(object sender, EventArgs e)
-        {
-            if (currentStep < steps.Count - 1)
-            {
-                currentStep++;
-                UpdateStepDisplay();
-                panelRight.Invalidate();
-            }
-        }
-
-        private void btnPrevStep_Click_1(object sender, EventArgs e)
-        {
-            if (currentStep > 0)
-            {
-                currentStep--;
-                UpdateStepDisplay();
-                panelRight.Invalidate();
-            }
-        }
-
-        private void UpdateStepDisplay()
-        {
-            lblStep.Text = $"Шаг {currentStep + 1}/{steps.Count}";
-
-            if (steps.Count > 0 && currentStep < steps.Count)
-            {
-                txtSolution.Text = string.Join("\n", steps.Take(currentStep + 1));
-                txtSolution.SelectionStart = txtSolution.Text.Length;
-                txtSolution.ScrollToCaret();
-            }
-        }
-
-        private void dataGridViewConstraints_CellValueChanged_1(object sender, DataGridViewCellEventArgs e)
-        {
-            UpdateConstraints();
-        }
-
+        // Вычисление оптимального масштаба для отображения
         private float CalculateOptimalScale()
         {
-
             if (feasiblePoints.Count == 0)
                 return 40f;
 
@@ -904,38 +887,110 @@ namespace zlpP
             }
         }
 
-        public class Constraint
+        // Обновление отображения текущего шага
+        private void UpdateStepDisplay()
         {
-            public double A { get; set; }
-            public double B { get; set; }
-            public string Inequality { get; set; }
-            public double C { get; set; }
+            lblStep.Text = $"Шаг {currentStep + 1}/{steps.Count}";
 
-            public Constraint(double a, double b, string inequality, double c)
+            if (steps.Count > 0 && currentStep < steps.Count)
             {
-                A = a;
-                B = b;
-                Inequality = inequality;
-                C = c;
-            }
-
-            public bool IsSatisfied(double x, double y)
-            {
-                double value = A * x + B * y;
-
-                switch (Inequality)
-                {
-                    case "<=": return value <= C + 0.001;
-                    case ">=": return value >= C - 0.001;
-                    case "=": return Math.Abs(value - C) < 0.001;
-                    default: return false;
-                }
-            }
-
-            public override string ToString()
-            {
-                return $"{A}x₁ + {B}x₂ {Inequality} {C}";
+                txtSolution.Text = string.Join("\n", steps.Take(currentStep + 1));
+                txtSolution.SelectionStart = txtSolution.Text.Length;
+                txtSolution.ScrollToCaret();
             }
         }
+
+        // Обработчики событий кнопок
+
+        private void btnAddConstraint_Click_1(object sender, EventArgs e)
+        {
+            dataGridViewConstraints.Rows.Add(1, 1, "<=", 5);
+            UpdateConstraints();
+        }
+
+        private void btnSolve_Click_1(object sender, EventArgs e)
+        {
+            SolveProblem();
+        }
+
+        private void btnClear_Click_1(object sender, EventArgs e)
+        {
+            dataGridViewConstraints.Rows.Clear();
+            constraints.Clear();
+            points.Clear();
+            feasiblePoints.Clear();
+            steps.Clear();
+            currentStep = 0;
+            isSolved = false;
+
+            txtX1.Clear();
+            txtX2.Clear();
+
+            rbMax.Checked = true;
+            rbMin.Checked = false;
+
+            txtSolution.Clear();
+            lblStep.Text = "Шаг 0/0";
+            panelRight.Invalidate();
+
+            AddDefaultConstraint();
+        }
+
+        private void btnNextStep_Click_1(object sender, EventArgs e)
+        {
+            if (currentStep < steps.Count - 1)
+            {
+                currentStep++;
+                UpdateStepDisplay();
+                panelRight.Invalidate();
+            }
+        }
+
+        private void btnPrevStep_Click_1(object sender, EventArgs e)
+        {
+            if (currentStep > 0)
+            {
+                currentStep--;
+                UpdateStepDisplay();
+                panelRight.Invalidate();
+            }
+        }
+
+        // Обработчик отрисовки правой панели
+        private void panelRight_Paint_1(object sender, PaintEventArgs e)
+        {
+            Graphics g = e.Graphics;
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+            DrawCoordinateSystem(g);
+
+            if (constraints.Count > 0)
+            {
+                DrawConstraints(g);
+
+                if (isSolved && currentStep >= 2)
+                {
+                    DrawFeasibleRegion(g);
+                }
+
+                if (isSolved && currentStep >= 5)
+                {
+                    DrawOptimalPoint(g);
+                }
+
+                if (isSolved && currentStep >= 4)
+                {
+                    DrawGradient(g);
+                }
+            }
+        }
+
+        // Обработчик изменения значений в таблице ограничений
+        private void dataGridViewConstraints_CellValueChanged_1(object sender, DataGridViewCellEventArgs e)
+        {
+            UpdateConstraints();
+        }
+
+
     }
 }
