@@ -74,7 +74,7 @@ namespace zlpP
             }
         }
 
-        // Инициализация таблицы ограничений
+        // Инициализация таблицы 
         private void InitializeDataGridView()
         {
             dataGridViewConstraints.RowHeadersVisible = false;
