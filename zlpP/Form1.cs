@@ -35,6 +35,7 @@ namespace zlpP
 
             // Добавляем ограничение по умолчанию
             AddDefaultConstraint();
+            InitializeDataGridView();
 
             InitializeData();
         }
@@ -48,6 +49,33 @@ namespace zlpP
 
             // Добавляем ограничение по умолчанию
             AddDefaultConstraint();
+        }
+
+        private void InitializeDataGridView()
+        {
+            // Скрываем первый столбец с номерами строк
+            dataGridViewConstraints.RowHeadersVisible = false;
+
+            // Настройка столбцов DataGridView
+            dataGridViewConstraints.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+
+            // Создаем столбцы если их нет
+            if (dataGridViewConstraints.Columns.Count == 0)
+            {
+                dataGridViewConstraints.Columns.Add("A", "Коэф. х₁");
+                dataGridViewConstraints.Columns.Add("B", "Коэф. х₂");
+                dataGridViewConstraints.Columns.Add("Sign", "Знак");
+                dataGridViewConstraints.Columns.Add("C", "Значение");
+            }
+
+            // Устанавливаем одинаковую ширину для трех столбцов
+            int equalWidth = 90; // или другое значение по вашему вкусу
+            dataGridViewConstraints.Columns["A"].Width = equalWidth;
+            dataGridViewConstraints.Columns["B"].Width = equalWidth;
+            dataGridViewConstraints.Columns["Sign"].Width = equalWidth;
+
+            // Четвертый столбец немного шире
+            dataGridViewConstraints.Columns["C"].Width = 110;
         }
 
         private void AddDefaultConstraint()
