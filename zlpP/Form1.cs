@@ -66,8 +66,8 @@ namespace zlpP
 
                 switch (Inequality)
                 {
-                    case "<=": return value <= C + 0.001;
-                    case ">=": return value >= C - 0.001;
+                    case "<=": return value <= C + 0.001; // ниже
+                    case ">=": return value >= C - 0.001; // выше
                     case "=": return Math.Abs(value - C) < 0.001;
                     default: return false;
                 }
@@ -103,7 +103,11 @@ namespace zlpP
         // Добавление ограничения по умолчанию
         private void AddDefaultConstraint()
         {
-            dataGridViewConstraints.Rows.Add(1, 1, "<=", 10);
+            dataGridViewConstraints.Rows.Add(12, 4, "<=", 300);
+            dataGridViewConstraints.Rows.Add(4, 4, "<=", 120);
+            dataGridViewConstraints.Rows.Add(3, 12, "<=", 252);
+            txtX1.Text = "30";
+            txtX2.Text = "40";
             UpdateConstraints();
         }
 
@@ -126,7 +130,7 @@ namespace zlpP
             panelRight.Invalidate();
         }
 
-        // Поиск всех точек пересечения ограничений
+        // Поиск всех точек пересечения ограничений - все возможные "кандидаты" в решение
         private void FindAllPoints()
         {
             points.Clear();
@@ -149,7 +153,7 @@ namespace zlpP
                 AddAxisIntersections(constraints[i]);
             }
 
-            // Добавляем точки далеко на осях для неограниченных областей
+            // Добавляем точки далеко на осях для неограниченных областей (типа условно бесконечные)
             AddFarPointsForUnboundedRegions();
         }
 
@@ -433,7 +437,7 @@ namespace zlpP
         {
             try
             {
-                // Получаем коэффициенты целевой функции из интерфейса
+                
                 double x1coef = Convert.ToDouble(txtX1.Text);
                 double x2coef = Convert.ToDouble(txtX2.Text);
                 bool isMax = rbMax.Checked; // Определяем направление оптимизации
@@ -454,8 +458,8 @@ namespace zlpP
                 FindOptimalSolution(x1coef, x2coef, isMax); // Находим оптимальное решение
                 GenerateSteps(x1coef, x2coef, isMax);       // Генерируем шаги решения
 
-                // Обновляем отображение
-                currentStep = Math.Min(steps.Count - 1, 28);
+                // Отображение
+                currentStep = 0;
                 UpdateStepDisplay();
                 isSolved = true;
                 panelRight.Invalidate();
